@@ -10,9 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, type BaseSyntheticEvent } from "react";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Image from "next/image";
 import type { Database } from "@/lib/schema";

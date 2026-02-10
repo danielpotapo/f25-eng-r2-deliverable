@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-import { z } from "zod";
 import Image from "next/image";
 import type { Database } from "@/lib/schema";
 

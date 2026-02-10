@@ -23,6 +23,20 @@ import { useState, type BaseSyntheticEvent } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+// avoid eslint problems
+interface WikipediaResponse {
+  extract?: string;
+  thumbnail?: {
+    source: string;
+    width: number;
+    height: number;
+  };
+  originalimage?: {
+    source: string;
+  };
+  title?: string;
+}
+
 
 // We use zod (z) to define a schema for the "Add species" form.
 // zod handles validation of the input values with methods like .string(), .nullable(). It also processes the form inputs with .transform() before the inputs are sent to the database.
@@ -105,7 +119,7 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
     try {
       const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(search)}`;
       const result = await fetch(url);
-      const data = await result.json() as any;
+      const data = await result.json() as WikipediaResponse;
 
       if (result.ok) {
         form.setValue("description", data.extract ?? null);

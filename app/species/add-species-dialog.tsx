@@ -108,8 +108,8 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
       const data = await result.json() as any;
 
       if (result.ok) {
-        form.setValue("description", data.extract || null);
-        form.setValue("image", data.thumbnail?.source || null);
+        form.setValue("description", data.extract ?? null);
+        form.setValue("image", data.thumbnail?.source ?? null);
 
         toast({ 
           title: "Found!",

@@ -3,14 +3,13 @@
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState, type BaseSyntheticEvent } from "react";
+import { useState } from "react";
 import { z } from "zod";
 import Image from "next/image";
 import type { Database } from "@/lib/schema";
@@ -59,14 +58,6 @@ Otherwise, they will be `undefined` by default, which will raise warnings becaus
 All form fields should be set to non-undefined default values.
 Read more here: https://legacy.react-hook-form.com/api/useform/
 */
-const defaultValues: Partial<FormData> = {
-  scientific_name: "",
-  common_name: null,
-  kingdom: "Animalia",
-  total_population: null,
-  image: null,
-  description: null,
-};
 
 export default function LearnMoreDialog({ spec }: { spec: Species }) {
   // Control open/closed state of the dialog

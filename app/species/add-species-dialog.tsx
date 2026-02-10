@@ -127,7 +127,7 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
 
         toast({ 
           title: "Found!",
-          description: `Loaded data for "${data.title || search}"`
+          description: `Loaded data for "${data.title ?? search}"`
         });
       } else {
         toast({ 

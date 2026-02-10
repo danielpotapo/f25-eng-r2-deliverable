@@ -3,11 +3,13 @@
 import { TypographyH2, TypographyP } from "@/components/ui/typography";
 import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { generateResponse } from "@/lib/services/species-chat";
 
 export default function SpeciesChatbot() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [message, setMessage] = useState("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "bot"; content: string }[]>([]);
+  const [waiting, setWaiting] = useState(false);
   const handleInput = () => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -18,6 +20,53 @@ export default function SpeciesChatbot() {
 
 const handleSubmit = async () => {
   // TODO: Implement this function
+  if (message != "" && !waiting) {
+    const maxLen = 250;
+    const userMessage = message;
+
+    // shorten message for user convenience
+    const shortMessage = message.length > maxLen ? message.slice(0, maxLen - 1) + "..." : message;
+    const newMessage : { role: "user" | "bot"; content: string } = {
+      role: "user",
+      content: shortMessage
+    }
+    
+    setChatLog((prevChatLog) => [...prevChatLog, newMessage]);
+
+    let dotCount: number = 1
+
+    setChatLog((prevChatLog) => [
+      ...prevChatLog,
+      { role: "bot", content: `Thinking.` }
+    ]);
+
+    const intervalId = setInterval(() => {
+    dotCount = (dotCount + 1) % 4;
+    const dots = ".".repeat(dotCount);
+    
+    setChatLog((prevChatLog) => [
+      ...prevChatLog.slice(0, -1),
+      { role: "bot", content: `Thinking${dots}` }
+    ]);
+  }, 500);
+
+    
+    // clear text box
+    setMessage("");
+
+    setWaiting(true);
+    const response : { role: "user" | "bot"; content: string } = {
+      role: "bot",
+      content: await generateResponse(userMessage)
+    }
+
+    clearInterval(intervalId);
+
+
+    setChatLog((prevChatLog) => [...prevChatLog.slice(0, -1), response]);
+    setWaiting(false);
+  }
+  
 }
 
 return (
@@ -42,7 +91,7 @@ return (
         {/* Chat history */}
         <div className="h-[400px] space-y-3 overflow-y-auto rounded-lg border border-border bg-muted p-4">
           {chatLog.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Start chatting about a species!</p>
+            <p className="text-sm text-muted-foreground">Start Chatting About A Species!</p>
           ) : (
             chatLog.map((msg, index) => (
               <div key={index} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -72,7 +121,9 @@ return (
           />
           <button
             type="button"
-            onClick={() => void handleSubmit()}
+            onClick={() => void handleSubmit()
+            }
+            
             className="mt-2 rounded bg-primary px-4 py-2 text-background transition hover:opacity-90"
           >
             Enter

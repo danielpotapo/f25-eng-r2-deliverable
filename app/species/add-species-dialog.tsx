@@ -22,6 +22,8 @@ import { useRouter } from "next/navigation";
 import { useState, type BaseSyntheticEvent } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useToast } from "@/components/ui/use-toast"; 
+
 
 // We use zod (z) to define a schema for the "Add species" form.
 // zod handles validation of the input values with methods like .string(), .nullable(). It also processes the form inputs with .transform() before the inputs are sent to the database.
@@ -79,6 +81,8 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
 
   // Control open/closed state of the dialog
   const [open, setOpen] = useState<boolean>(false);
+  const [search, setSearch] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
 
   // Instantiate form functionality with React Hook Form, passing in the Zod schema (for validation) and default values
   const form = useForm<FormData>({
@@ -86,6 +90,49 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
     defaultValues,
     mode: "onChange",
   });
+
+  const searchWikipedia = async () => {
+    if (!search.trim()) {
+      toast({
+        title: "Search required",
+        description: "Please enter a species name",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(search)}`;
+      const result = await fetch(url);
+      const data = await result.json() as any;
+
+      if (result.ok) {
+        form.setValue("description", data.extract || null);
+        form.setValue("image", data.thumbnail?.source || null);
+
+        toast({ 
+          title: "Found!",
+          description: `Loaded data for "${data.title || search}"`
+        });
+      } else {
+        toast({ 
+          title: "Not found!", 
+          description: "Try using the scientific name",
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: "Failed to search Wikipedia",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const onSubmit = async (input: FormData) => {
     // The `input` prop contains data that has already been processed by zod. We can now use it in a supabase query
@@ -144,6 +191,24 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
             Add a new species here. Click &quot;Add Species&quot; below when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
+        <div className="border rounded-lg p-4 bg-muted/50 mb-4">
+                  <h4 className="text-sm font-semibold mb-2">Autofill from Wikipedia</h4>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search species (e.g., 'Cavia porcellus')"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => void searchWikipedia()}
+                      disabled={isSearching}
+                      variant="secondary"
+                    >
+                      {isSearching ? "Searching..." : "Search"}
+                    </Button>
+                  </div>
+                </div>
         <Form {...form}>
           <form onSubmit={(e: BaseSyntheticEvent) => void form.handleSubmit(onSubmit)(e)}>
             <div className="grid w-full items-center gap-4">

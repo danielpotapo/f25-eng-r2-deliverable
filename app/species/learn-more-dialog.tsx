@@ -19,9 +19,6 @@ type Species = Database["public"]["Tables"]["species"]["Row"];
 // We use zod (z) to define a schema for the "Add species" form.
 // zod handles validation of the input values with methods like .string(), .nullable(). It also processes the form inputs with .transform() before the inputs are sent to the database.
 
-// Define kingdom enum for use in Zod schema and displaying dropdown options in the form
-const kingdoms = z.enum(["Animalia", "Plantae", "Fungi", "Protista", "Archaea", "Bacteria"]);
-
 
 // Default values for the form fields.
 /* Because the react-hook-form (RHF) used here is a controlled form (not an uncontrolled form),

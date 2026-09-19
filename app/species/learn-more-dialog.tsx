@@ -11,9 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import Image from "next/image";
-import type { Database } from "@/lib/schema";
-
-type Species = Database["public"]["Tables"]["species"]["Row"];
+import CommentsSection from "./comments-section";
+import type { SpeciesWithAuthor } from "./species-card";
 
 // We use zod (z) to define a schema for the "Add species" form.
 // zod handles validation of the input values with methods like .string(), .nullable(). It also processes the form inputs with .transform() before the inputs are sent to the database.
@@ -27,7 +26,7 @@ All form fields should be set to non-undefined default values.
 Read more here: https://legacy.react-hook-form.com/api/useform/
 */
 
-export default function LearnMoreDialog({ spec }: { spec: Species }) {
+export default function LearnMoreDialog({ spec, userId }: { spec: SpeciesWithAuthor; userId: string }) {
   // Control open/closed state of the dialog
   const [open, setOpen] = useState<boolean>(false);
 
@@ -54,7 +53,19 @@ export default function LearnMoreDialog({ spec }: { spec: Species }) {
         <div className="relative h-100 w-full">
             <strong>Total Population: </strong><p>{spec.total_population}</p>
             <strong>Kingdom: </strong><p>{spec.kingdom}</p>
+            <strong>Endangered: </strong><p>{spec.endangered ? "Yes" : "No"}</p>
             <strong>Description: </strong><p>{spec.description}</p>
+            <strong>Author: </strong>
+            {spec.profiles ? (
+              <p>
+                {spec.profiles.display_name} ({spec.profiles.email})
+                {spec.profiles.biography && <><br /><em>{spec.profiles.biography}</em></>}
+              </p>
+            ) : (
+              <p>Unknown</p>
+            )}
+            {/* Comments are only fetched when the dialog is open, so the list stays fresh each time it is viewed */}
+            {open && <CommentsSection speciesId={spec.id} userId={userId} />}
         </div>
       </DialogContent>
     </Dialog>

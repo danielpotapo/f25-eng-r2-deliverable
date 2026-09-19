@@ -25,6 +25,7 @@ import { z } from "zod";
 
 // avoid eslint problems
 interface WikipediaResponse {
+  type?: string;
   extract?: string;
   thumbnail?: {
     source: string;
@@ -58,6 +59,7 @@ const speciesSchema = z.object({
     .transform((val) => (!val || val.trim() === "" ? null : val.trim())),
   kingdom: kingdoms,
   total_population: z.number().int().positive().min(1).nullable(),
+  endangered: z.boolean(),
   image: z
     .string()
     .url()
@@ -85,6 +87,7 @@ const defaultValues: Partial<FormData> = {
   common_name: null,
   kingdom: "Animalia",
   total_population: null,
+  endangered: false,
   image: null,
   description: null,
 };
@@ -96,6 +99,8 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  // Candidate article titles shown when a search hits a Wikipedia disambiguation page (e.g. "python")
+  const [candidates, setCandidates] = useState<string[]>([]);
 
   // Instantiate form functionality with React Hook Form, passing in the Zod schema (for validation) and default values
   const form = useForm<FormData>({
@@ -103,6 +108,67 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
     defaultValues,
     mode: "onChange",
   });
+
+  // Fetch the summary for a specific article title and autofill the form, or surface candidate
+  // titles to choose from if the title resolves to a disambiguation page (e.g. "python" could be
+  // the snake or the programming language).
+  const fetchSummary = async (title: string) => {
+    setIsSearching(true);
+    setCandidates([]);
+
+    try {
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+      const result = await fetch(url);
+      const data = await result.json() as WikipediaResponse;
+
+      if (result.ok && data.type !== "disambiguation") {
+        form.setValue("description", data.extract ?? null);
+        form.setValue("image", data.thumbnail?.source ?? null);
+
+        toast({
+          title: "Found!",
+          description: `Loaded data for "${data.title ?? title}"`
+        });
+      } else if (result.ok) {
+        // Disambiguation page: look up the possible article titles so the user can pick one
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&format=json&origin=*&limit=8&namespace=0&search=${encodeURIComponent(title)}`;
+        const searchResult = await fetch(searchUrl);
+        const searchData = await searchResult.json() as [string, string[], string[], string[]];
+        // Drop the disambiguation page itself (the exact-title match) and any "... (disambiguation)" entries
+        const options = searchData[1].filter(
+          (t) => t.toLowerCase() !== title.toLowerCase() && !t.toLowerCase().includes("(disambiguation)"),
+        );
+
+        if (options.length > 0) {
+          setCandidates(options);
+          toast({
+            title: "Multiple matches",
+            description: `"${data.title ?? title}" could mean several things — pick one below.`
+          });
+        } else {
+          toast({
+            title: "Not found!",
+            description: "Try using the scientific name",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Not found!",
+          description: "Try using the scientific name",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to search Wikipedia",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const searchWikipedia = async () => {
     if (!search.trim()) {
@@ -114,37 +180,7 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
       return;
     }
 
-    setIsSearching(true);
-
-    try {
-      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(search)}`;
-      const result = await fetch(url);
-      const data = await result.json() as WikipediaResponse;
-
-      if (result.ok) {
-        form.setValue("description", data.extract ?? null);
-        form.setValue("image", data.thumbnail?.source ?? null);
-
-        toast({ 
-          title: "Found!",
-          description: `Loaded data for "${data.title ?? search}"`
-        });
-      } else {
-        toast({ 
-          title: "Not found!", 
-          description: "Try using the scientific name",
-          variant: "destructive" 
-        });
-      }
-    } catch (error) {
-      toast({ 
-        title: "Error", 
-        description: "Failed to search Wikipedia",
-        variant: "destructive" 
-      });
-    } finally {
-      setIsSearching(false);
-    }
+    await fetchSummary(search.trim());
   };
 
   const onSubmit = async (input: FormData) => {
@@ -158,6 +194,7 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
         kingdom: input.kingdom,
         scientific_name: input.scientific_name,
         total_population: input.total_population,
+        endangered: input.endangered,
         image: input.image,
       },
     ]);
@@ -221,6 +258,25 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
                       {isSearching ? "Searching..." : "Search"}
                     </Button>
                   </div>
+                  {candidates.length > 0 && (
+                    <div className="mt-3">
+                      <p className="mb-2 text-sm text-muted-foreground">Did you mean:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {candidates.map((candidate) => (
+                          <Button
+                            key={candidate}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isSearching}
+                            onClick={() => void fetchSummary(candidate)}
+                          >
+                            {candidate}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
         <Form {...form}>
           <form onSubmit={(e: BaseSyntheticEvent) => void form.handleSubmit(onSubmit)(e)}>
@@ -303,6 +359,27 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
                     </FormItem>
                   );
                 }}
+              />
+              <FormField
+                control={form.control}
+                name="endangered"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        {/* Checkboxes need `checked`/`e.target.checked` instead of the `value` prop that {...field} would spread in */}
+                        <input
+                          type="checkbox"
+                          checked={field.value ?? false}
+                          onChange={(event) => field.onChange(event.target.checked)}
+                          className="h-4 w-4 accent-primary"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Endangered</FormLabel>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
               <FormField
                 control={form.control}

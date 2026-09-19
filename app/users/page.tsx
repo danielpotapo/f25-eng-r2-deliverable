@@ -2,10 +2,8 @@ import { Separator } from "@/components/ui/separator";
 import { TypographyH2 } from "@/components/ui/typography";
 import { createServerSupabaseClient } from "@/lib/server-utils";
 import { redirect } from "next/navigation";
-import AddSpeciesDialog from "./add-species-dialog";
-import SpeciesList from "./species-list";
 
-export default async function SpeciesPage() {
+export default async function UsersPage() {
   // Create supabase server component client and obtain user session from stored cookie
   const supabase = createServerSupabaseClient();
   const {
@@ -17,23 +15,23 @@ export default async function SpeciesPage() {
     redirect("/");
   }
 
-  // Obtain the ID of the currently signed-in user
-  const sessionId = session.user.id;
-
-  // Join each species with its author's profile (via the species_author_fkey relationship) so the detailed view can display author information
-  const { data: species } = await supabase
-    .from("species")
-    .select("*, profiles(display_name, email, biography)")
-    .order("id", { ascending: false });
+  const { data: profiles } = await supabase.from("profiles").select("*").order("display_name", { ascending: true });
 
   return (
     <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <TypographyH2>Species List</TypographyH2>
-        <AddSpeciesDialog userId={sessionId} />
+        <TypographyH2>Users</TypographyH2>
       </div>
       <Separator className="my-4" />
-      <SpeciesList species={species ?? []} userId={sessionId} />
+      <div className="flex flex-wrap justify-center">
+        {profiles?.map((profile) => (
+          <div key={profile.id} className="m-4 w-72 min-w-72 flex-none rounded border-2 p-3 shadow">
+            <h3 className="mt-3 text-2xl font-semibold">{profile.display_name}</h3>
+            <h4 className="text-lg font-light">{profile.email}</h4>
+            <p className="mt-2">{profile.biography ?? <em>No biography provided.</em>}</p>
+          </div>
+        ))}
+      </div>
     </>
   );
 }

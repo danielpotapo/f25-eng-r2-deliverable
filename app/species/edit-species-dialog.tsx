@@ -46,6 +46,7 @@ const speciesSchema = z.object({
     .transform((val) => (!val || val.trim() === "" ? null : val.trim())),
   kingdom: kingdoms,
   total_population: z.number().int().positive().min(1).nullable(),
+  endangered: z.boolean(),
   image: z
     .string()
     .url()
@@ -73,6 +74,7 @@ const defaultValues: Partial<FormData> = {
   common_name: null,
   kingdom: "Animalia",
   total_population: null,
+  endangered: false,
   image: null,
   description: null,
 };
@@ -91,6 +93,7 @@ export default function EditSpeciesDialog({spec }: { spec: Species }) {
     common_name: spec.common_name ?? "",
     kingdom: spec.kingdom ?? "",
     total_population: spec.total_population ?? 0,
+    endangered: spec.endangered ?? false,
     image: spec.image ?? "",
     description: spec.description ?? "",
   },
@@ -108,6 +111,7 @@ export default function EditSpeciesDialog({spec }: { spec: Species }) {
         kingdom: input.kingdom,
         scientific_name: input.scientific_name,
         total_population: input.total_population,
+        endangered: input.endangered,
         image: input.image,
       },
     ).eq("id", spec.id);
@@ -234,6 +238,27 @@ export default function EditSpeciesDialog({spec }: { spec: Species }) {
                       </FormItem>
                     );
                   }}
+                />
+                <FormField
+                  control={form.control}
+                  name="endangered"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center gap-2">
+                        <FormControl>
+                          {/* Checkboxes need `checked`/`e.target.checked` instead of the `value` prop that {...field} would spread in */}
+                          <input
+                            type="checkbox"
+                            checked={field.value ?? false}
+                            onChange={(event) => field.onChange(event.target.checked)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Endangered</FormLabel>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 <FormField
                   control={form.control}

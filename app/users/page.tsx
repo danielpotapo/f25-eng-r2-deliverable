@@ -26,9 +26,15 @@ export default async function UsersPage() {
       <div className="flex flex-wrap justify-center">
         {profiles?.map((profile) => (
           <div key={profile.id} className="m-4 w-72 min-w-72 flex-none rounded border-2 p-3 shadow">
-            <h3 className="mt-3 text-2xl font-semibold">{profile.display_name}</h3>
-            <h4 className="text-lg font-light">{profile.email}</h4>
-            <p className="mt-2">{profile.biography ?? <em>No biography provided.</em>}</p>
+            <h3 className="mt-3 truncate text-2xl font-semibold">
+              {profile.display_name.trim() ? profile.display_name : profile.email.split("@")[0]}
+            </h3>
+            <h4 className="truncate text-lg font-light" title={profile.email}>
+              {profile.email}
+            </h4>
+            <p className="mt-2 break-words">
+              {profile.biography?.trim() ? profile.biography : <em>No biography provided.</em>}
+            </p>
           </div>
         ))}
       </div>
